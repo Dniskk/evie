@@ -10,6 +10,12 @@ This project uses [uv](https://docs.astral.sh/uv/) for dependency management.
 # Install dependencies
 uv sync
 
+# Optional: Install with CUDA support (Linux/Windows with NVIDIA GPU)
+uv sync --extra cuda
+
+# Optional: Install with MPS support (macOS with Apple Silicon)
+uv sync --extra mps
+
 # Run tests
 uv run pytest
 
@@ -22,6 +28,12 @@ uv run ruff check .
 # Type check
 uv run basedpyright
 ```
+
+### Platform Support
+
+- **Linux**: Full support with optional CUDA acceleration
+- **macOS**: Full support with optional Metal Performance Shaders (MPS) for Apple Silicon
+- **Windows**: Full support with optional CUDA acceleration
 
 ## Development
 

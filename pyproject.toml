@@ -4,7 +4,18 @@ version = "0.1.0"
 description = "LLM training framework"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "torch>=2.0.0",
+]
+
+[project.optional-dependencies]
+# Platform-specific installations for optimal performance
+cuda = [
+    "torch>=2.0.0; platform_system=='Linux' or platform_system=='Windows'",
+]
+mps = [
+    "torch>=2.0.0; platform_system=='Darwin'",  # macOS with Metal Performance Shaders
+]
 
 [build-system]
 requires = ["uv_build>=0.10.7,<0.11.0"]
