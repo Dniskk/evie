@@ -1,7 +1,5 @@
 #!/bin/bash
-# Create a conventional commit for evie
-# Usage: commit <type> <issue-number> <message>
-
+# Helper script for conventional commits
 set -euo pipefail
 
 TYPE="${1:-}"
@@ -10,12 +8,9 @@ shift 2 || true
 MESSAGE="$*"
 
 if [ -z "$TYPE" ] || [ -z "$ISSUE_NUM" ] || [ -z "$MESSAGE" ]; then
-    echo "Usage: commit <type> <issue-number> <message>"
+    echo "Usage: commit.sh <type> <issue-number> <message>"
     echo ""
     echo "Types: feat, fix, docs, style, refactor, test, chore"
-    echo ""
-    echo "Example:"
-    echo "  commit feat 5 implement multi-head attention"
     exit 1
 fi
 

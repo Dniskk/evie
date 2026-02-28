@@ -1,15 +1,13 @@
 #!/bin/bash
-# Create a pull request for evie
-# Usage: pr <issue-number> <title>
-
+# Helper script for creating PRs
 set -euo pipefail
 
 ISSUE_NUM="${1:-}"
-TITLE="${2:-}"
+shift || true
+TITLE="$*"
 
 if [ -z "$ISSUE_NUM" ] || [ -z "$TITLE" ]; then
-    echo "Usage: pr <issue-number> <title>"
-    echo "Example: pr 5 \"implement transformer\""
+    echo "Usage: pr.sh <issue-number> <title>"
     exit 1
 fi
 
