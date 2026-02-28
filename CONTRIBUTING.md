@@ -84,7 +84,7 @@ def process_tokens(tokens: list[str], max_length: int) -> list[str]:
 
 ### Docstrings
 
-Use Google-style docstrings for all public functions, classes, and modules:
+Use Google-style docstrings when helpful for understanding complex functionality:
 
 ```python
 def train_model(
@@ -133,7 +133,23 @@ uv run pytest tests/test_transformer.py
 uv run pytest --cov=evie
 ```
 
-Tests should be placed in the `tests/` directory with the naming pattern `test_*.py`.
+### Test Structure
+
+Tests should mirror the `src/` directory structure. For example:
+
+```
+src/
+  evie/
+    models/
+      transformer.py
+
+tests/
+  evie/
+    models/
+      test_transformer.py
+```
+
+This makes it easy to find tests for any given module.
 
 ## Commit Messages
 
@@ -187,7 +203,6 @@ Closes #8
 - Use imperative mood ("move cursor to..." not "moves cursor to...")
 - Keep the first line under 72 characters
 - Reference the issue number in parentheses after the type
-- Add `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>` for AI-assisted commits
 
 ## Pull Request Process
 
@@ -196,44 +211,20 @@ Closes #8
 Create a new branch for each issue following this pattern:
 
 ```
-annie/<issue-number>-<short-description>
+<your-name>/<issue-number>-<short-description>
 ```
 
 Examples:
-- `annie/5-implement-transformer`
-- `annie/12-fix-attention-mask`
-- `annie/6-add-dataset-docs`
+- `alice/5-implement-transformer`
+- `bob/12-fix-attention-mask`
+- `charlie/6-add-dataset-docs`
 
 ### Creating a PR
 
-1. **Create your branch**
-
-```bash
-git checkout -b annie/42-add-feature
-```
-
-2. **Make your changes and commit**
-
-```bash
-git add .
-git commit -m "feat(42): add awesome feature"
-```
-
-3. **Push to your fork**
-
-```bash
-git push -u origin annie/42-add-feature
-```
-
-4. **Create the PR**
-
-Use GitHub's interface or the `gh` CLI:
-
-```bash
-gh pr create --title "feat(42): Add awesome feature" \
-  --body "Description of changes" \
-  --reviewer Dniskk
-```
+Create a pull request using GitHub's interface or your preferred method. Ensure your PR:
+- Has a clear title following conventional commits format
+- Describes what changes were made and why
+- References the issue number it addresses
 
 ### PR Requirements
 

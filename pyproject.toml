@@ -25,8 +25,8 @@ extend-select = [
     "RUF", "TRY",
 ]
 extend-ignore = [
-    "ANN002", "COM812", "D100", "D104", "PLR0904", "PLR0913", "S311",
-    "PLR0914", "D107", "PLR0911", "ANN401", "PLR0912",
+    "ANN002", "COM812", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    "PLR0904", "PLR0913", "S311", "PLR0914", "PLR0911", "ANN401", "PLR0912",
 ]
 
 [tool.ruff.lint.per-file-ignores]
