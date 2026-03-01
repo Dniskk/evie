@@ -14,6 +14,8 @@ import torch.nn.functional as F
 class Embedding(nn.Module):
     """Embedding layer for token and position embeddings.
 
+    Applies sqrt(dim) scaling factor as in "Attention is All You Need".
+
     Args:
         vocab_size: Size of the vocabulary.
         dim: Embedding dimension.
@@ -23,6 +25,11 @@ class Embedding(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, dim)
         self.dim = dim
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        """Initialize embedding weights with normal distribution."""
+        nn.init.normal_(self.embedding.weight, mean=0.0, std=0.02)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -65,7 +72,10 @@ class PositionalEncoding(nn.Module):
             * -(math.log(10000.0) / dim)
         )
 
+        # Apply sine to even indices (0, 2, 4, ...)
         pe[:, 0::2] = torch.sin(position * div_term)
+        # Apply cosine to odd indices (1, 3, 5, ...)
+        # Handle odd dimensions: if dim is odd, div_term has one extra element for sine
         if dim % 2 == 1:
             pe[:, 1::2] = torch.cos(position * div_term[:-1])
         else:
@@ -142,9 +152,15 @@ class MultiHeadAttention(nn.Module):
         self.head_dim = dim // num_heads
         self.scale = 1.0 / math.sqrt(self.head_dim)
 
-        self.qkv = nn.Linear(dim, dim * 3)
-        self.proj = nn.Linear(dim, dim)
+        self.qkv = nn.Linear(dim, dim * 3, bias=False)
+        self.proj = nn.Linear(dim, dim, bias=False)
         self.dropout = nn.Dropout(p=dropout)
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        """Initialize attention weights with Xavier uniform initialization."""
+        nn.init.xavier_uniform_(self.qkv.weight)
+        nn.init.xavier_uniform_(self.proj.weight)
 
     def forward(
         self,
@@ -155,7 +171,11 @@ class MultiHeadAttention(nn.Module):
 
         Args:
             x: Input tensor of shape (batch_size, seq_length, dim).
-            mask: Optional attention mask of shape (batch_size, seq_length, seq_length).
+            mask: Optional attention mask. Can be:
+                  - (seq_length, seq_length): Same mask for all batch items and heads
+                  - (batch_size, seq_length, seq_length): Per-batch mask
+                  - (batch_size, num_heads, seq_length, seq_length): Full mask
+                  Positions with value 0 are masked out (set to -inf before softmax).
                   Defaults to None.
 
         Returns:
@@ -176,6 +196,15 @@ class MultiHeadAttention(nn.Module):
         scores = (q @ k.transpose(-2, -1)) * self.scale
 
         if mask is not None:
+            # Handle different mask shapes through broadcasting
+            # mask shape can be (S, S), (B, S, S), or (B, H, S, S)
+            # scores shape is (B, H, S, S)
+            if mask.dim() == 2:
+                # (S, S) -> (1, 1, S, S) for broadcasting
+                mask = mask.unsqueeze(0).unsqueeze(0)
+            elif mask.dim() == 3:
+                # (B, S, S) -> (B, 1, S, S) for broadcasting
+                mask = mask.unsqueeze(1)
             scores = scores.masked_fill(mask == 0, float("-inf"))
 
         attn_weights = F.softmax(scores, dim=-1)
@@ -213,6 +242,14 @@ class FeedForward(nn.Module):
         self.fc1 = nn.Linear(dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, dim)
         self.dropout = nn.Dropout(p=dropout)
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        """Initialize feedforward weights with Xavier uniform initialization."""
+        nn.init.xavier_uniform_(self.fc1.weight)
+        nn.init.xavier_uniform_(self.fc2.weight)
+        nn.init.zeros_(self.fc1.bias)
+        nn.init.zeros_(self.fc2.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply feed-forward network.
@@ -278,6 +315,7 @@ class TransformerDecoder(nn.Module):
     """Transformer decoder stack.
 
     Stacks multiple transformer blocks to form a complete transformer decoder.
+    Uses pre-normalization (LayerNorm before attention and FFN) for training stability.
 
     Args:
         vocab_size: Size of the vocabulary.
@@ -300,6 +338,13 @@ class TransformerDecoder(nn.Module):
         dropout: float = 0.1,
     ) -> None:
         super().__init__()
+        if dim % num_heads != 0:
+            msg = f"dim ({dim}) must be divisible by num_heads ({num_heads})"
+            raise ValueError(msg)
+        if num_layers < 1:
+            msg = f"num_layers must be at least 1, got {num_layers}"
+            raise ValueError(msg)
+
         self.embedding = Embedding(vocab_size, dim)
         self.pos_encoding = PositionalEncoding(dim, max_seq_length, dropout)
         self.layers = nn.ModuleList(
@@ -310,6 +355,12 @@ class TransformerDecoder(nn.Module):
         )
         self.norm = LayerNorm(dim)
         self.output_proj = nn.Linear(dim, vocab_size)
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        """Initialize output projection weights."""
+        nn.init.normal_(self.output_proj.weight, mean=0.0, std=0.02)
+        nn.init.zeros_(self.output_proj.bias)
 
     def forward(
         self,
@@ -320,7 +371,8 @@ class TransformerDecoder(nn.Module):
 
         Args:
             x: Input token indices of shape (batch_size, seq_length).
-            mask: Optional attention mask of shape (batch_size, 1, seq_length, seq_length).
+            mask: Optional attention mask. See MultiHeadAttention for supported shapes.
+                  For causal (autoregressive) decoding, use create_causal_mask().
                   Defaults to None.
 
         Returns:
@@ -335,3 +387,18 @@ class TransformerDecoder(nn.Module):
         x = self.norm(x)
         x = self.output_proj(x)
         return x
+
+
+def create_causal_mask(seq_length: int, device: torch.device | None = None) -> torch.Tensor:
+    """Create a causal (lower triangular) attention mask for autoregressive decoding.
+
+    Args:
+        seq_length: Length of the sequence.
+        device: Device to create the mask on. Defaults to CPU.
+
+    Returns:
+        Boolean mask of shape (seq_length, seq_length) where mask[i, j] = 1 if i >= j,
+        else 0. This ensures each position can only attend to itself and previous positions.
+    """
+    mask = torch.tril(torch.ones(seq_length, seq_length, device=device))
+    return mask

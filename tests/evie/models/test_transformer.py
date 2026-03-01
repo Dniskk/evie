@@ -1,5 +1,6 @@
 """Tests for transformer architecture."""
 
+import pytest
 import torch
 import torch.nn as nn
 
@@ -11,6 +12,7 @@ from evie.models.transformer import (
     PositionalEncoding,
     TransformerBlock,
     TransformerDecoder,
+    create_causal_mask,
 )
 
 
@@ -79,6 +81,19 @@ class TestPositionalEncoding:
         output2 = pos_enc(x)
 
         assert torch.allclose(output1, output2)
+
+    def test_positional_encoding_odd_dimension(self) -> None:
+        # Test that odd dimensions are handled correctly
+        dim = 63  # Odd dimension
+        max_seq = 256
+        pos_enc = PositionalEncoding(dim, max_seq)
+
+        x = torch.randn(2, 100, dim)
+        output = pos_enc(x)
+
+        assert output.shape == (2, 100, dim)
+        # Verify no NaN values
+        assert not torch.isnan(output).any()
 
 
 class TestLayerNorm:
@@ -175,6 +190,65 @@ class TestMultiHeadAttention:
 
         assert x.grad is not None
         assert x.grad.shape == x.shape
+
+    def test_attention_mask_2d(self) -> None:
+        dim = 64
+        num_heads = 4
+        attention = MultiHeadAttention(dim, num_heads)
+        attention.eval()
+
+        batch_size = 2
+        seq_len = 8
+        x = torch.randn(batch_size, seq_len, dim)
+
+        # Test with 2D mask (seq_len, seq_len)
+        mask_2d = torch.ones(seq_len, seq_len)
+        output = attention(x, mask_2d)
+        assert output.shape == (batch_size, seq_len, dim)
+
+    def test_attention_mask_3d(self) -> None:
+        dim = 64
+        num_heads = 4
+        attention = MultiHeadAttention(dim, num_heads)
+        attention.eval()
+
+        batch_size = 2
+        seq_len = 8
+        x = torch.randn(batch_size, seq_len, dim)
+
+        # Test with 3D mask (batch_size, seq_len, seq_len)
+        mask_3d = torch.ones(batch_size, seq_len, seq_len)
+        output = attention(x, mask_3d)
+        assert output.shape == (batch_size, seq_len, dim)
+
+    def test_attention_mask_4d(self) -> None:
+        dim = 64
+        num_heads = 4
+        attention = MultiHeadAttention(dim, num_heads)
+        attention.eval()
+
+        batch_size = 2
+        seq_len = 8
+        x = torch.randn(batch_size, seq_len, dim)
+
+        # Test with 4D mask (batch_size, num_heads, seq_len, seq_len)
+        mask_4d = torch.ones(batch_size, num_heads, seq_len, seq_len)
+        output = attention(x, mask_4d)
+        assert output.shape == (batch_size, seq_len, dim)
+
+    def test_attention_causal_mask(self) -> None:
+        dim = 64
+        num_heads = 4
+        attention = MultiHeadAttention(dim, num_heads)
+        attention.eval()
+
+        seq_len = 8
+        x = torch.randn(1, seq_len, dim)
+
+        # Test with causal mask
+        causal_mask = create_causal_mask(seq_len)
+        output = attention(x, causal_mask)
+        assert output.shape == (1, seq_len, dim)
 
 
 class TestFeedForward:
@@ -372,6 +446,84 @@ class TestTransformerDecoder:
 
         assert logits.shape == (2, 4, vocab_size)
         assert logits.dtype == torch.float32
+
+    def test_decoder_with_causal_mask(self) -> None:
+        vocab_size = 256
+        dim = 64
+        num_heads = 4
+        num_layers = 2
+        hidden_dim = 256
+
+        decoder = TransformerDecoder(
+            vocab_size,
+            dim,
+            num_heads,
+            num_layers,
+            hidden_dim,
+        )
+        decoder.eval()
+
+        batch_size = 2
+        seq_len = 16
+        x = torch.randint(0, vocab_size, (batch_size, seq_len))
+
+        # Use causal mask for autoregressive decoding
+        causal_mask = create_causal_mask(seq_len)
+
+        with torch.no_grad():
+            output = decoder(x, causal_mask)
+
+        assert output.shape == (batch_size, seq_len, vocab_size)
+
+    def test_decoder_invalid_dim_num_heads(self) -> None:
+        with pytest.raises(ValueError, match="dim.*must be divisible by num_heads"):
+            TransformerDecoder(
+                vocab_size=100,
+                dim=100,
+                num_heads=7,  # 100 not divisible by 7
+                num_layers=2,
+                hidden_dim=256,
+            )
+
+    def test_decoder_invalid_num_layers(self) -> None:
+        with pytest.raises(ValueError, match="num_layers must be at least 1"):
+            TransformerDecoder(
+                vocab_size=100,
+                dim=64,
+                num_heads=4,
+                num_layers=0,  # Invalid
+                hidden_dim=256,
+            )
+
+
+class TestCausalMask:
+    """Tests for causal mask utility."""
+
+    def test_causal_mask_shape(self) -> None:
+        seq_len = 10
+        mask = create_causal_mask(seq_len)
+        assert mask.shape == (seq_len, seq_len)
+
+    def test_causal_mask_lower_triangular(self) -> None:
+        seq_len = 5
+        mask = create_causal_mask(seq_len)
+
+        # Check that diagonal and below are 1
+        for i in range(seq_len):
+            for j in range(seq_len):
+                if i >= j:
+                    assert mask[i, j] == 1
+                else:
+                    assert mask[i, j] == 0
+
+    def test_causal_mask_device(self) -> None:
+        seq_len = 8
+        mask_cpu = create_causal_mask(seq_len, device=torch.device("cpu"))
+        assert mask_cpu.device.type == "cpu"
+
+        if torch.cuda.is_available():
+            mask_cuda = create_causal_mask(seq_len, device=torch.device("cuda"))
+            assert mask_cuda.device.type == "cuda"
 
 
 class TestIntegration:
