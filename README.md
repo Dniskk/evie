@@ -31,6 +31,8 @@ The project follows these standards:
 - **Type checker**: basedpyright
 - **Docstring style**: Google style
 
+For detailed contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Project Structure
 
 ```

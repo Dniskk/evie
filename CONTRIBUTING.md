@@ -170,7 +170,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) with issue n
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
-- `style`: Code style changes (formatting, missing semicolons, etc.)
+- `style`: Code style changes (formatting, whitespace, etc.)
 - `refactor`: Code refactoring without changing functionality
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks, dependency updates, etc.
@@ -225,6 +225,9 @@ Create a pull request using GitHub's interface or your preferred method. Ensure 
 - Has a clear title following conventional commits format
 - Describes what changes were made and why
 - References the issue number it addresses
+- Assigns `Dniskk` as the reviewer
+
+You can use `gh pr create` or the GitHub web interface to create PRs.
 
 ### PR Requirements
 
@@ -277,10 +280,20 @@ When you make changes, update the relevant documentation:
 
 See [docs/README.md](docs/README.md) for the documentation structure.
 
+## Claude Code Skills
+
+The `.claude/skills/` directory contains helpful reference guides for common tasks:
+
+- **commit/** - Conventional commits format and examples
+- **pr/** - Pull request creation process and requirements
+
+These skills provide quick reference for project conventions when working with Claude Code.
+
 ## Getting Help
 
 - Check existing [issues](https://github.com/Dniskk/evie/issues)
 - Read the [documentation](docs/README.md)
+- Review `.claude/skills/` for common workflows
 - Ask questions in issue comments
 
 ## Code of Conduct
