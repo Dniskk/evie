@@ -1,43 +1,71 @@
 ---
 name: commit
-description: Create a conventional commit following evie's format
-argument-hint: [type] [issue-number] [message]
+description: Create commits following evie's conventional commits format
 disable-model-invocation: true
 ---
 
-# Conventional Commit
+# Conventional Commits
 
-Create a commit following evie's conventional commits format.
+evie uses conventional commits to maintain a clear and organized commit history.
 
-## Usage
+## Format
 
-```bash
-/commit <type> <issue-number> <message>
+```
+<type>(<issue-number>): <description>
 ```
 
-## Types
+## Commit Types
 
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation changes
-- `style` - Code style changes (formatting)
-- `refactor` - Code refactoring
+- `style` - Code style changes (formatting, etc.)
+- `refactor` - Code refactoring without changing functionality
 - `test` - Adding or updating tests
-- `chore` - Maintenance tasks
+- `chore` - Maintenance tasks, dependency updates, etc.
 
-## Example
+## Guidelines
 
-```bash
-/commit feat 5 implement multi-head attention mechanism
+- Use present tense: "add feature" not "added feature"
+- Use imperative mood: "move cursor to..." not "moves cursor to..."
+- Keep the first line under 72 characters
+- Always reference the issue number in parentheses after the type
+- For multi-line commits, include a blank line between the header and body
+
+## Examples
+
+Single line:
+```
+feat(5): implement multi-head attention mechanism
 ```
 
-Creates commit: `feat(5): implement multi-head attention mechanism`
+Multi-line:
+```
+feat(8): add learning rate scheduler
 
-## Format
+Implement cosine annealing with warmup for better training stability.
+The scheduler gradually increases LR during warmup then decreases
+following a cosine curve.
 
-All commits follow the pattern: `<type>(<issue-number>): <message>`
+Closes #8
+```
 
-- Use present tense ("add" not "added")
-- Use imperative mood ("move" not "moves")
-- Keep first line under 72 characters
-- Reference the issue number
+Bug fix:
+```
+fix(12): correct gradient accumulation in training loop
+```
+
+Documentation:
+```
+docs(6): add dataset preprocessing guide
+```
+
+## Closing Issues
+
+If your commit closes an issue, add to the commit body or title:
+
+```
+Closes #<issue-number>
+```
+
+This automatically closes the issue when the commit is merged.

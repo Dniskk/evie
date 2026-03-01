@@ -1,33 +1,49 @@
 ---
 name: pr
-description: Create a pull request for evie following project conventions
-argument-hint: [issue-number] [title]
+description: Create a pull request following evie's conventions
 disable-model-invocation: true
 ---
 
-# Create Pull Request
+# Creating a Pull Request
 
-Create a pull request following evie's conventions.
+When creating a pull request for evie, follow these steps:
 
-## Usage
+## Branch Requirements
 
-```bash
-/pr <issue-number> <title>
+- Branch should follow the naming convention: `<your-name>/<issue-number>-<short-description>`
+- Examples: `alice/5-implement-transformer`, `bob/12-fix-attention-mask`
+
+## PR Title
+
+Use conventional commits format for the title:
+
+```
+feat(<issue-number>): <description>
 ```
 
-## Example
+Examples:
+- `feat(5): implement multi-head attention`
+- `fix(12): correct gradient accumulation`
+- `docs(6): add dataset preprocessing guide`
 
-```bash
-/pr 5 implement transformer architecture
-```
+## PR Body
 
-This creates a PR titled `feat(5): implement transformer architecture` that closes issue #5 and assigns Dniskk as reviewer.
+Include:
+- What changes were made and why
+- Reference the issue: `Closes #<issue-number>`
 
-## Steps
+## Requirements Before Merge
 
-1. Verify you're on a feature branch (not main)
-2. Push branch to remote if not already pushed
-3. Create PR with:
-   - Title: `feat($ARGUMENTS[0]): $ARGUMENTS[1+]`
-   - Body: `Closes #$ARGUMENTS[0]`
-   - Reviewer: Dniskk
+Your PR must satisfy:
+- ✅ All tests pass
+- ✅ Code is formatted (`ruff format`)
+- ✅ No linting errors (`ruff check`)
+- ✅ Type checking passes (`basedpyright`)
+- ✅ New functionality includes tests
+- ✅ Documentation is updated
+- ✅ Branch name follows convention
+- ✅ PR has been reviewed and approved
+
+## Assigning Reviewers
+
+Assign `Dniskk` as the reviewer.
