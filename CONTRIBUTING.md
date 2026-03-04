@@ -24,19 +24,22 @@ cd evie
 uv sync
 ```
 
-3. **Install pre-commit hooks**
+3. **Install prek hooks**
 
-Pre-commit hooks automatically run quality checks before each commit:
+Prek hooks automatically run quality checks before each commit. Prek is a faster, Rust-powered alternative to pre-commit:
 
 ```bash
-# Install pre-commit (if not already installed)
-pip install pre-commit
+# Install prek using standalone installer (recommended)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
+
+# Or install via uv (if you prefer)
+uv tool install prek
 
 # Install the git hooks
-pre-commit install
+prek install
 ```
 
-What the pre-commit hooks do:
+What the prek hooks do:
 - **ruff format**: Automatically formats your Python code
 - **ruff lint**: Checks for code quality issues and fixes auto-fixable ones
 - **basedpyright**: Runs type checking on your code
@@ -51,7 +54,7 @@ When you commit, these checks run automatically. If any check fails:
 To run the hooks manually on all files:
 
 ```bash
-pre-commit run --all-files
+prek run --all-files
 ```
 
 To skip hooks (not recommended, only for emergencies):
@@ -256,8 +259,8 @@ All four jobs must pass before a PR can be merged. You can see the status of the
 To ensure your PR will pass CI, run these commands before pushing:
 
 ```bash
-# Run all checks at once with pre-commit
-pre-commit run --all-files
+# Run all checks at once with prek
+prek run --all-files
 
 # Or run individually:
 uv run pytest tests/ -v --cov=evie

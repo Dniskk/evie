@@ -1,6 +1,6 @@
-# Pre-commit hooks configuration
-# Install: pre-commit install
-# Run manually: pre-commit run --all-files
+# Prek hooks configuration
+# Install: prek install
+# Run manually: prek run --all-files
 
 repos:
   # Ruff - Fast Python linter and formatter
