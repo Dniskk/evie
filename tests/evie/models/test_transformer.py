@@ -5,43 +5,11 @@ import torch
 import torch.nn as nn
 
 from evie.models.transformer import (
-    Embedding,
-    FeedForward,
-    LayerNorm,
-    MultiHeadAttention,
     PositionalEncoding,
     TransformerBlock,
     TransformerDecoder,
     create_causal_mask,
 )
-
-
-class TestEmbedding:
-    """Tests for Embedding layer."""
-
-    def test_embedding_output_shape(self) -> None:
-        vocab_size = 1000
-        dim = 128
-        batch_size = 4
-        seq_len = 32
-
-        embedding = Embedding(vocab_size, dim)
-        x = torch.randint(0, vocab_size, (batch_size, seq_len))
-        output = embedding(x)
-
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_embedding_scaling(self) -> None:
-        vocab_size = 100
-        dim = 64
-        embedding = Embedding(vocab_size, dim)
-
-        x = torch.zeros((1, 1), dtype=torch.long)
-        output = embedding(x)
-
-        expected_scale = (dim**0.5)
-        actual_scale = output.abs().max().item()
-        assert actual_scale > 0
 
 
 class TestPositionalEncoding:
@@ -96,188 +64,6 @@ class TestPositionalEncoding:
         assert not torch.isnan(output).any()
 
 
-class TestLayerNorm:
-    """Tests for LayerNorm."""
-
-    def test_layer_norm_shape(self) -> None:
-        dim = 128
-        layer_norm = LayerNorm(dim)
-
-        x = torch.randn(4, 32, dim)
-        output = layer_norm(x)
-
-        assert output.shape == x.shape
-
-    def test_layer_norm_mean_variance(self) -> None:
-        dim = 64
-        layer_norm = LayerNorm(dim)
-        layer_norm.weight.data.fill_(1.0)
-        layer_norm.bias.data.fill_(0.0)
-
-        x = torch.randn(2, 16, dim)
-        output = layer_norm(x)
-
-        mean = output.mean(dim=-1)
-        var = output.var(dim=-1, unbiased=False)
-
-        assert torch.allclose(mean, torch.zeros_like(mean), atol=1e-5)
-        assert torch.allclose(var, torch.ones_like(var), atol=1e-5)
-
-
-class TestMultiHeadAttention:
-    """Tests for MultiHeadAttention."""
-
-    def test_attention_output_shape(self) -> None:
-        dim = 128
-        num_heads = 8
-        attention = MultiHeadAttention(dim, num_heads)
-
-        batch_size = 4
-        seq_len = 32
-        x = torch.randn(batch_size, seq_len, dim)
-        output = attention(x)
-
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_attention_with_mask(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-
-        batch_size = 2
-        seq_len = 16
-        x = torch.randn(batch_size, seq_len, dim)
-
-        mask = torch.ones(batch_size, seq_len, seq_len)
-        output = attention(x, mask)
-
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_attention_dropout_training(self) -> None:
-        dim = 128
-        num_heads = 8
-        attention = MultiHeadAttention(dim, num_heads, dropout=0.5)
-        attention.train()
-
-        x = torch.randn(1, 32, dim)
-        output1 = attention(x)
-        output2 = attention(x)
-
-        assert not torch.allclose(output1, output2)
-
-    def test_attention_dropout_eval(self) -> None:
-        dim = 128
-        num_heads = 8
-        attention = MultiHeadAttention(dim, num_heads, dropout=0.5)
-        attention.eval()
-
-        x = torch.randn(1, 32, dim)
-        output1 = attention(x)
-        output2 = attention(x)
-
-        assert torch.allclose(output1, output2)
-
-    def test_attention_gradient_flow(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-        attention.train()
-
-        x = torch.randn(2, 8, dim, requires_grad=True)
-        output = attention(x)
-        loss = output.sum()
-        loss.backward()
-
-        assert x.grad is not None
-        assert x.grad.shape == x.shape
-
-    def test_attention_mask_2d(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-        attention.eval()
-
-        batch_size = 2
-        seq_len = 8
-        x = torch.randn(batch_size, seq_len, dim)
-
-        # Test with 2D mask (seq_len, seq_len)
-        mask_2d = torch.ones(seq_len, seq_len)
-        output = attention(x, mask_2d)
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_attention_mask_3d(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-        attention.eval()
-
-        batch_size = 2
-        seq_len = 8
-        x = torch.randn(batch_size, seq_len, dim)
-
-        # Test with 3D mask (batch_size, seq_len, seq_len)
-        mask_3d = torch.ones(batch_size, seq_len, seq_len)
-        output = attention(x, mask_3d)
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_attention_mask_4d(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-        attention.eval()
-
-        batch_size = 2
-        seq_len = 8
-        x = torch.randn(batch_size, seq_len, dim)
-
-        # Test with 4D mask (batch_size, num_heads, seq_len, seq_len)
-        mask_4d = torch.ones(batch_size, num_heads, seq_len, seq_len)
-        output = attention(x, mask_4d)
-        assert output.shape == (batch_size, seq_len, dim)
-
-    def test_attention_causal_mask(self) -> None:
-        dim = 64
-        num_heads = 4
-        attention = MultiHeadAttention(dim, num_heads)
-        attention.eval()
-
-        seq_len = 8
-        x = torch.randn(1, seq_len, dim)
-
-        # Test with causal mask
-        causal_mask = create_causal_mask(seq_len)
-        output = attention(x, causal_mask)
-        assert output.shape == (1, seq_len, dim)
-
-
-class TestFeedForward:
-    """Tests for FeedForward."""
-
-    def test_feedforward_output_shape(self) -> None:
-        dim = 128
-        hidden_dim = 512
-        ffn = FeedForward(dim, hidden_dim)
-
-        x = torch.randn(4, 32, dim)
-        output = ffn(x)
-
-        assert output.shape == (4, 32, dim)
-
-    def test_feedforward_different_shapes(self) -> None:
-        dim = 64
-        hidden_dim = 256
-        ffn = FeedForward(dim, hidden_dim)
-
-        x = torch.randn(1, 100, dim)
-        output = ffn(x)
-        assert output.shape == (1, 100, dim)
-
-        x = torch.randn(8, 16, dim)
-        output = ffn(x)
-        assert output.shape == (8, 16, dim)
-
-
 class TestTransformerBlock:
     """Tests for TransformerBlock."""
 
@@ -320,6 +106,21 @@ class TestTransformerBlock:
 
         assert output.shape == x.shape
         assert not torch.allclose(output, x)
+
+    def test_transformer_block_causal_mask(self) -> None:
+        dim = 64
+        num_heads = 4
+        hidden_dim = 256
+        block = TransformerBlock(dim, num_heads, hidden_dim)
+        block.eval()
+
+        seq_len = 8
+        x = torch.randn(1, seq_len, dim)
+
+        # Test with causal mask
+        causal_mask = create_causal_mask(seq_len)
+        output = block(x, causal_mask)
+        assert output.shape == (1, seq_len, dim)
 
 
 class TestTransformerDecoder:
@@ -495,6 +296,24 @@ class TestTransformerDecoder:
                 hidden_dim=256,
             )
 
+    def test_decoder_embedding_scaling(self) -> None:
+        vocab_size = 100
+        dim = 64
+        num_heads = 4
+        num_layers = 1
+        hidden_dim = 256
+
+        decoder = TransformerDecoder(
+            vocab_size,
+            dim,
+            num_heads,
+            num_layers,
+            hidden_dim,
+        )
+
+        # Verify embedding scale is set correctly
+        assert decoder.embedding_scale == (dim**0.5)
+
 
 class TestCausalMask:
     """Tests for causal mask utility."""
@@ -597,3 +416,27 @@ class TestIntegration:
             output = model(x)
 
             assert output.device.type == "cuda"
+
+    def test_model_uses_pytorch_components(self) -> None:
+        """Verify model uses PyTorch built-in components."""
+        model = TransformerDecoder(
+            vocab_size=100,
+            dim=64,
+            num_heads=4,
+            num_layers=2,
+            hidden_dim=256,
+        )
+
+        # Check that embedding is torch.nn.Embedding
+        assert isinstance(model.embedding, nn.Embedding)
+
+        # Check that norm is torch.nn.LayerNorm
+        assert isinstance(model.norm, nn.LayerNorm)
+
+        # Check that transformer blocks use PyTorch components
+        for layer in model.layers:
+            assert isinstance(layer, TransformerBlock)
+            assert isinstance(layer.norm1, nn.LayerNorm)
+            assert isinstance(layer.norm2, nn.LayerNorm)
+            assert isinstance(layer.attention, nn.MultiheadAttention)
+            assert isinstance(layer.ffn, nn.Sequential)
