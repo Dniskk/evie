@@ -24,7 +24,46 @@ cd evie
 uv sync
 ```
 
-3. **Verify your setup**
+3. **Install prek hooks**
+
+Prek hooks automatically run quality checks before each commit. Prek is a faster, Rust-powered alternative to pre-commit:
+
+```bash
+# Install prek using standalone installer (recommended)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/j178/prek/releases/latest/download/prek-installer.sh | sh
+
+# Or install via uv (if you prefer)
+uv tool install prek
+
+# Install the git hooks
+prek install
+```
+
+What the prek hooks do:
+- **ruff format**: Automatically formats your Python code
+- **ruff lint**: Checks for code quality issues and fixes auto-fixable ones
+- **basedpyright**: Runs type checking on your code
+- **pytest**: Runs the test suite to ensure nothing breaks
+- **File checks**: Detects secrets, removes trailing whitespace, fixes file endings
+
+When you commit, these checks run automatically. If any check fails:
+- Fix the reported issues
+- Stage the changes with `git add`
+- Try committing again
+
+To run the hooks manually on all files:
+
+```bash
+prek run --all-files
+```
+
+To skip hooks (not recommended, only for emergencies):
+
+```bash
+git commit --no-verify -m "your message"
+```
+
+4. **Verify your setup**
 
 ```bash
 # Run tests
@@ -203,6 +242,38 @@ Closes #8
 - Use imperative mood ("move cursor to..." not "moves cursor to...")
 - Keep the first line under 72 characters
 - Reference the issue number in parentheses after the type
+
+## Continuous Integration
+
+Every push to `main` and every pull request triggers our CI pipeline on GitHub Actions. The pipeline runs four parallel jobs:
+
+1. **Test Suite**: Runs pytest with coverage reporting
+2. **Lint Check**: Runs ruff lint to catch code quality issues
+3. **Format Check**: Verifies code is properly formatted with ruff
+4. **Type Check**: Runs basedpyright for static type checking
+
+All four jobs must pass before a PR can be merged. You can see the status of these checks on your PR page.
+
+### Running CI Checks Locally
+
+To ensure your PR will pass CI, run these commands before pushing:
+
+```bash
+# Run all checks at once with prek
+prek run --all-files
+
+# Or run individually:
+uv run pytest tests/ -v --cov=evie
+uv run ruff check .
+uv run ruff format --check .
+uv run basedpyright
+```
+
+If any check fails in CI:
+1. Review the error message in the GitHub Actions log
+2. Fix the issue locally
+3. Run the failing check locally to verify
+4. Push the fix
 
 ## Pull Request Process
 
